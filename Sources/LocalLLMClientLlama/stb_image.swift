@@ -3,8 +3,8 @@
 import Accelerate
 import CoreImage
 
-@_silgen_name("stbi_load_from_memory")
-func stbi_load_from_memory(_ buffer:  UnsafePointer<UInt8>, _ len: UInt64, _ x: UnsafeMutablePointer<Int32>, _ y: UnsafeMutablePointer<Int32>, _ comp: UnsafeMutablePointer<Int32>, _ req_comp: Int32) -> UnsafeMutableRawPointer? {
+@_cdecl("stbi_load_from_memory")
+public func stbi_load_from_memory(_ buffer:  UnsafePointer<UInt8>, _ len: UInt64, _ x: UnsafeMutablePointer<Int32>, _ y: UnsafeMutablePointer<Int32>, _ comp: UnsafeMutablePointer<Int32>, _ req_comp: Int32) -> UnsafeMutableRawPointer? {
     assert(req_comp == 3, "Only RGB format is supported")
 
     let data = Data(bytes: buffer, count: Int(len))
@@ -19,8 +19,8 @@ func stbi_load_from_memory(_ buffer:  UnsafePointer<UInt8>, _ len: UInt64, _ x: 
     return rgbBytes
 }
 
-@_silgen_name("stbi_load")
-func stbi_load(_ filename: UnsafePointer<CChar>, _ x: UnsafeMutablePointer<Int32>, _ y: UnsafeMutablePointer<Int32>, _ comp: UnsafeMutablePointer<Int32>, _ req_comp: Int32) -> UnsafeMutableRawPointer? {
+@_cdecl("stbi_load")
+public func stbi_load(_ filename: UnsafePointer<CChar>, _ x: UnsafeMutablePointer<Int32>, _ y: UnsafeMutablePointer<Int32>, _ comp: UnsafeMutablePointer<Int32>, _ req_comp: Int32) -> UnsafeMutableRawPointer? {
     assert(req_comp == 3, "Only RGB format is supported")
 
     guard let url = URL(string: String(cString: filename)),
@@ -36,8 +36,8 @@ func stbi_load(_ filename: UnsafePointer<CChar>, _ x: UnsafeMutablePointer<Int32
     return rgbBytes
 }
 
-@_silgen_name("stbi_image_free")
-func stbi_image_free(_ buffer: UnsafeMutableRawPointer) {
+@_cdecl("stbi_image_free")
+public func stbi_image_free(_ buffer: UnsafeMutableRawPointer) {
     buffer.assumingMemoryBound(to: UInt8.self).deallocate()
 }
 
