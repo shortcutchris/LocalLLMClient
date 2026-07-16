@@ -47,8 +47,11 @@ struct StandardToolInstructionProcessor: ToolInstructionProcessor {
             processedMessages = injectToolInstructions(processedMessages, instructions: toolInstructions)
         }
 
-        // Convert tool messages to assistant messages if needed
-        processedMessages = processToolMessages(processedMessages)
+        // Native tool-aware templates understand the standard tool role and
+        // tool_call_id. Older templates receive the compatibility wrapper.
+        if !templateHasNativeSupport {
+            processedMessages = processToolMessages(processedMessages)
+        }
 
         return processedMessages
     }

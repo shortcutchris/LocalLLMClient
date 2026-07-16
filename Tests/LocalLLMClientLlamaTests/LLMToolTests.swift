@@ -27,6 +27,48 @@ extension ModelTests.LLMToolTests {
         #expect(functionDict["description"] as? String == "Get the current weather for a location")
         #expect(functionDict["parameters"] is [String: Any])
     }
+
+    @Test func runtimeDefinedToolPreservesItsJSONSchema() {
+        let schema: [String: any Sendable] = [
+            "type": "object",
+            "properties": [
+                "query": [
+                    "type": "string",
+                    "description": "Search query"
+                ]
+            ],
+            "required": ["query"],
+            "additionalProperties": false
+        ]
+        let tool = AnyLLMTool(
+            name: "mcp.search",
+            description: "Search a local fixture",
+            argumentsSchema: schema
+        )
+        let json = tool.toOAICompatJSON()
+
+        let function = json["function"] as? [String: Any]
+        let parameters = function?["parameters"] as? [String: Any]
+        #expect(function?["name"] as? String == "mcp.search")
+        #expect(parameters?["type"] as? String == "object")
+        #expect(parameters?["required"] as? [String] == ["query"])
+    }
+
+    @Test func chatTemplateReceivesThinkingOverride() throws {
+        let processor = MessageProcessorFactory.chatMLProcessor()
+        let template = """
+        {% if enable_thinking %}thinking{% else %}direct{% endif %}
+        {% for message in messages %}{{ message.role }}: {{ message.content }}{% endfor %}
+        """
+        let (result, _) = try processor.renderAndExtractChunks(
+            messages: [.user("Hello")],
+            template: template,
+            additionalContext: ["enable_thinking": false]
+        )
+
+        #expect(result.contains("direct"))
+        #expect(!result.contains("thinking"))
+    }
     
     @Test func toolsInTemplate() throws {
         let tool = WeatherTool()

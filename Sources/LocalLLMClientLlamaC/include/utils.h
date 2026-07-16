@@ -10,6 +10,7 @@ common_chat_templates* get_common_chat_templates(const common_chat_templates_ptr
 
 // Wrapper functions for Swift C++ interop
 common_chat_templates_inputs* create_chat_templates_inputs();
+void set_enable_thinking(common_chat_templates_inputs* inputs, bool enabled);
 void add_message_to_inputs(common_chat_templates_inputs* inputs, const char* role, const char* content);
 void add_tool_to_inputs(common_chat_templates_inputs* inputs, const char* name, const char* description, const char* parameters_json);
 common_chat_params apply_chat_templates_safe(const common_chat_templates* tmpls, common_chat_templates_inputs* inputs);

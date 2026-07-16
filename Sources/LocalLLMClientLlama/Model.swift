@@ -64,11 +64,15 @@ final class Model {
     /// the tool list (i.e. `LlamaClient`), not the `Model` itself.
     ///
     /// The returned pointer must be freed with `free_chat_params`.
-    func buildChatParams(tools: [AnyLLMTool]) -> UnsafeMutablePointer<llm_chat_params>? {
+    func buildChatParams(
+        tools: [AnyLLMTool],
+        enableThinking: Bool = true
+    ) -> UnsafeMutablePointer<llm_chat_params>? {
         let inputs = create_chat_templates_inputs()
         defer {
             free_chat_templates_inputs(inputs)
         }
+        set_enable_thinking(inputs, enableThinking)
         add_message_to_inputs(inputs, "user", "probe")
         for tool in tools {
             let oaiJSON = tool.toOAICompatJSON()

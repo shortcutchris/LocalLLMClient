@@ -19,6 +19,13 @@ common_chat_templates_inputs* create_chat_templates_inputs() {
     return inputs;
 }
 
+void set_enable_thinking(common_chat_templates_inputs* inputs, bool enabled) {
+    if (inputs) {
+        inputs->enable_thinking = enabled;
+        inputs->chat_template_kwargs["enable_thinking"] = enabled ? "true" : "false";
+    }
+}
+
 void add_message_to_inputs(common_chat_templates_inputs* inputs, const char* role, const char* content) {
     if (inputs && role && content) {
         common_chat_msg msg;

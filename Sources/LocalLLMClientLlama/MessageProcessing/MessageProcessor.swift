@@ -26,14 +26,18 @@ public struct MessageProcessor: Sendable {
         messages: [LLMInput.Message],
         context: Context,
         multimodal: MultimodalContext?,
-        tools: [AnyLLMTool] = []
+        tools: [AnyLLMTool] = [],
+        additionalContext: [String: Any] = [:]
     ) throws(LLMError) {
         // Step 1: Transform messages
         let templateMessages = transformer.transform(messages)
         
         // Step 2: Extract special tokens
         let specialTokens = llamaDecoder.extractSpecialTokens(from: context.model)
-        let templateContext = TemplateContext(specialTokens: specialTokens)
+        let templateContext = TemplateContext(
+            specialTokens: specialTokens,
+            additionalContext: additionalContext
+        )
         
         // Step 3: Render template
         let prompt = try renderer.render(
@@ -63,11 +67,15 @@ public struct MessageProcessor: Sendable {
         templateMessages: [LLMInput.ChatTemplateMessage],
         context: Context,
         multimodal: MultimodalContext?,
-        tools: [AnyLLMTool] = []
+        tools: [AnyLLMTool] = [],
+        additionalContext: [String: Any] = [:]
     ) throws(LLMError) {
         // Skip transformation step when messages are already in template format
         let specialTokens = llamaDecoder.extractSpecialTokens(from: context.model)
-        let templateContext = TemplateContext(specialTokens: specialTokens)
+        let templateContext = TemplateContext(
+            specialTokens: specialTokens,
+            additionalContext: additionalContext
+        )
         
         let prompt = try renderer.render(
             messages: templateMessages,
@@ -125,10 +133,14 @@ extension MessageProcessor {
         messages: [LLMInput.Message],
         template: String,
         specialTokens: [String: String] = [:],
-        tools: [AnyLLMTool] = []
+        tools: [AnyLLMTool] = [],
+        additionalContext: [String: Any] = [:]
     ) throws(LLMError) -> (rendered: String, chunks: [MessageChunk]) {
         let templateMessages = transformer.transform(messages)
-        let templateContext = TemplateContext(specialTokens: specialTokens)
+        let templateContext = TemplateContext(
+            specialTokens: specialTokens,
+            additionalContext: additionalContext
+        )
         
         let rendered = try renderer.render(
             messages: templateMessages,

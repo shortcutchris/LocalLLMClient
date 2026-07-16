@@ -60,6 +60,30 @@ public struct AnyLLMTool: Sendable {
             }
         }
     }
+
+    /// Creates a tool from a runtime-provided JSON Schema.
+    ///
+    /// This is useful for tool catalogs discovered after the application has
+    /// launched, such as Model Context Protocol servers. The optional call
+    /// closure lets a host execute the tool itself; callers that only need to
+    /// expose the schema to a model may omit it.
+    public init(
+        name: String,
+        description: String,
+        argumentsSchema: [String: any Sendable],
+        call: (@Sendable (String) async throws -> ToolOutput)? = nil
+    ) {
+        let backingTool = RuntimeDefinedLLMTool(name: name, description: description)
+        self._name = name
+        self._description = description
+        self._argumentsSchema = argumentsSchema
+        self._tool = backingTool
+        self._call = call ?? { _ in
+            throw LLMError.invalidParameter(
+                reason: "Runtime-defined tool '\(name)' has no direct executor"
+            )
+        }
+    }
     
     /// Executes the tool with JSON-encoded arguments
     /// - Parameter argumentsJSON: JSON string containing the arguments
@@ -84,6 +108,21 @@ public struct AnyLLMTool: Sendable {
         let jsonString = String(decoding: jsonData, as: UTF8.self)
         
         return try await call(argumentsJSON: jsonString)
+    }
+}
+
+private struct RuntimeDefinedLLMTool: LLMTool {
+    struct Arguments: Decodable, ToolSchemaGeneratable {
+        static var argumentsSchema: LLMToolArgumentsSchema { [:] }
+    }
+
+    let name: String
+    let description: String
+
+    func call(arguments: Arguments) async throws -> ToolOutput {
+        throw LLMError.invalidParameter(
+            reason: "Runtime-defined tool '\(name)' has no direct executor"
+        )
     }
 }
 
