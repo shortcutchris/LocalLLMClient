@@ -164,7 +164,7 @@ public final class LlamaClient: LLMClient {
                 endTag: getToolCallEndTag(format: requestFormat)
             )
             
-            Task {
+            let producer = Task {
                 do {
                     var fullText = ""
                     
@@ -199,6 +199,9 @@ public final class LlamaClient: LLMClient {
                 } catch {
                     continuation.finish(throwing: error)
                 }
+            }
+            continuation.onTermination = { _ in
+                producer.cancel()
             }
         }
     }
