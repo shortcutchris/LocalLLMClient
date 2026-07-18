@@ -156,27 +156,90 @@ package final class StreamingToolCallProcessor: Sendable {
         
         let jsonString = String(match.output.1)
         
-        // Try to parse as JSON
-        guard let data = jsonString.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let name = json["name"] as? String else {
-            return nil
-        }
-        
-        // Extract arguments
-        let arguments: String
-        if let args = json["arguments"] {
-            if let argsData = try? JSONSerialization.data(withJSONObject: args) {
+        if let data = jsonString.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let name = json["name"] as? String {
+            let arguments: String
+            if let args = json["arguments"],
+               let argsData = try? JSONSerialization.data(withJSONObject: args) {
                 arguments = String(decoding: argsData, as: UTF8.self)
             } else {
                 arguments = "{}"
             }
-        } else {
-            arguments = "{}"
+            let id = (json["id"] as? String) ?? UUID().uuidString
+            return LLMToolCall(id: id, name: name, arguments: arguments)
         }
-        
-        let id = (json["id"] as? String) ?? UUID().uuidString
-        
-        return LLMToolCall(id: id, name: name, arguments: arguments)
+
+        return parseQwenXMLToolCall(from: jsonString)
+    }
+
+    private func parseQwenXMLToolCall(from body: String) -> LLMToolCall? {
+        let functionExpression = try! NSRegularExpression(
+            pattern: #"<function=([A-Za-z0-9_.:-]+)>\s*(.*?)\s*</function>"#,
+            options: [.dotMatchesLineSeparators]
+        )
+        let parameterExpression = try! NSRegularExpression(
+            pattern: #"<parameter=([A-Za-z0-9_.:-]+)>\s*(.*?)\s*</parameter>"#,
+            options: [.dotMatchesLineSeparators]
+        )
+        let bodyRange = NSRange(body.startIndex..<body.endIndex, in: body)
+        guard let functionMatch = functionExpression.firstMatch(
+            in: body,
+            range: bodyRange
+        ),
+              let nameRange = Range(functionMatch.range(at: 1), in: body),
+              let parametersRange = Range(functionMatch.range(at: 2), in: body)
+        else {
+            return nil
+        }
+
+        let parametersBody = String(body[parametersRange])
+        let parameterRange = NSRange(
+            parametersBody.startIndex..<parametersBody.endIndex,
+            in: parametersBody
+        )
+        var arguments: [String: Any] = [:]
+        for match in parameterExpression.matches(
+            in: parametersBody,
+            range: parameterRange
+        ) {
+            guard let keyRange = Range(match.range(at: 1), in: parametersBody),
+                  let valueRange = Range(match.range(at: 2), in: parametersBody)
+            else {
+                return nil
+            }
+            let key = String(parametersBody[keyRange])
+            guard arguments[key] == nil else { return nil }
+            let rawValue = String(parametersBody[valueRange])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            arguments[key] = decodedQwenValue(rawValue)
+        }
+        guard !arguments.isEmpty
+                || parametersBody.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                ).isEmpty,
+              JSONSerialization.isValidJSONObject(arguments),
+              let data = try? JSONSerialization.data(
+                  withJSONObject: arguments,
+                  options: [.sortedKeys]
+              )
+        else {
+            return nil
+        }
+        return LLMToolCall(
+            name: String(body[nameRange]),
+            arguments: String(decoding: data, as: UTF8.self)
+        )
+    }
+
+    private func decodedQwenValue(_ rawValue: String) -> Any {
+        guard let data = rawValue.data(using: .utf8),
+              let value = try? JSONSerialization.jsonObject(
+                  with: data,
+                  options: [.fragmentsAllowed]
+              ) else {
+            return rawValue
+        }
+        return value
     }
 }

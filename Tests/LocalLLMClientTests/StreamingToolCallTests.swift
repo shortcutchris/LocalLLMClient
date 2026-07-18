@@ -114,6 +114,35 @@ struct StreamingToolCallTests {
         #expect(processor.toolCalls.count == 1)
         #expect(processor.toolCalls[0].name == "test")
     }
+
+    @Test
+    func testQwenXMLToolCallDetection() throws {
+        let processor = StreamingToolCallProcessor()
+        let chunks = [
+            "<tool_call>\n<function=mcp_brave_web_search>\n",
+            "<parameter=count>\n10\n</parameter>\n",
+            "<parameter=query>\nDocker MCP Gateway official documentation\n</parameter>\n",
+            "</function>\n</tool_call>"
+        ]
+
+        for chunk in chunks {
+            let visibleText = processor.processChunk(chunk)
+            #expect(visibleText == nil || visibleText?.isEmpty == true)
+        }
+
+        let toolCall = try #require(processor.toolCalls.first)
+        #expect(processor.toolCalls.count == 1)
+        #expect(toolCall.name == "mcp_brave_web_search")
+        let data = try #require(toolCall.arguments.data(using: .utf8))
+        let arguments = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        #expect(arguments["count"] as? Int == 10)
+        #expect(
+            arguments["query"] as? String
+                == "Docker MCP Gateway official documentation"
+        )
+    }
 }
 
 // Mock client for testing
