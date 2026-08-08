@@ -19,6 +19,23 @@ extension ModelTests.ContextTests {
         try await verifyContext(withText: "こんにちは, 世界！")
     }
 
+    @Test
+    func resetContextClearsDecodedTokensAndPromptCache() async throws {
+        let client = try await LocalLLMClient.llama()
+        let context = client._context
+        let chunk = MessageChunk.text("confidential prompt")
+
+        try context.decode(text: "confidential prompt")
+        context.addCache(for: chunk, position: context.position)
+        #expect(context.position > 0)
+        #expect(context.lastCacheIndex(of: [chunk]) != nil)
+
+        client.resetContext()
+
+        #expect(context.position == 0)
+        #expect(context.lastCacheIndex(of: [chunk]) == nil)
+    }
+
     private func verifyContext(withText text: String) async throws {
         let client = try await LocalLLMClient.llama()
         let context = client._context

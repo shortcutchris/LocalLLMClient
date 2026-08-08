@@ -93,11 +93,12 @@ public final class Context: @unchecked Sendable {
     }
 
     public func clear() {
-        guard let kv = llama_get_memory(context) else {
-            return
+        if let kv = llama_get_memory(context) {
+            llama_memory_clear(kv, true)
         }
-
-        llama_memory_clear(kv, true)
+        promptCaches.removeAll(keepingCapacity: true)
+        batch.clear()
+        llama_sampler_reset(sampling)
     }
 
     func addCache(for chunk: MessageChunk, position: llama_pos) {

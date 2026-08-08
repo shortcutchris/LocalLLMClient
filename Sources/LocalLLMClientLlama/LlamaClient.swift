@@ -225,6 +225,16 @@ public final class LlamaClient: LLMClient {
             return "</tool_call>"
         }
     }
+
+    /// Clears the decoded prompt, generated tokens, prompt cache, and sampler
+    /// state while retaining the loaded model allocation.
+    ///
+    /// Call this only after the current response stream has finished or been
+    /// cancelled. The next request starts from an empty context without paying
+    /// the cost of reloading the model.
+    public func resetContext() {
+        context.clear()
+    }
     
     /// Pauses any ongoing text generation
     public func pauseGeneration() async {
